@@ -1,5 +1,4 @@
 from django.db import models, router
-from django.utils.module_loading import import_string
 
 from django_permanent import settings
 from .deletion import *  # NOQA
@@ -8,6 +7,12 @@ from .query import NonDeletedQuerySet, DeletedQuerySet, PermanentQuerySet
 from .managers import QuerySetManager
 
 from .signals import pre_restore, post_restore
+
+try:
+    # import_string - can use with Django versions >= 1.7
+    from django.utils.module_loading import import_string as import_helper
+except ImportError:
+    from django.utils.module_loading import import_by_path as import_helper
 
 
 class PermanentModel(models.Model):
@@ -40,5 +45,5 @@ class PermanentModel(models.Model):
         post_restore.send(sender=self.__class__, instance=self)
 
 
-field = import_string(settings.FIELD_CLASS)
+field = import_helper(settings.FIELD_CLASS)
 PermanentModel.add_to_class(settings.FIELD, field(**settings.FIELD_KWARGS))

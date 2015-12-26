@@ -11,6 +11,12 @@ from django_permanent import settings
 
 from .signals import pre_restore, post_restore
 
+# ValuesQuerySet has been removed for django 1.9
+try:
+    from django.db.models.query import ValuesQuerySet
+except ImportError:
+    ValuesQuerySet = None
+
 
 class BasePermanentQuerySet(QuerySet):
     def __deepcopy__(self, memo):
@@ -76,7 +82,12 @@ class BasePermanentQuerySet(QuerySet):
         return self.get_unpatched().update(**{settings.FIELD: settings.FIELD_DEFAULT})
 
     def values(self, *fields):
-        klass = type('CustomValuesQuerySet', (self.__class__, QuerySet,), {})
+        # If the ValuesQuerySet has been imported use it.
+        if ValuesQuerySet:
+            klass = type('CustomValuesQuerySet', (self.__class__, ValuesQuerySet,), {})
+        else:
+            klass = type('CustomValuesQuerySet', (self.__class__, QuerySet,), {})
+
         return self._clone(klass=klass, setup=True, _fields=fields)
 
     # I don't like the bottom code, but most of operations during QuerySet cloning Django do outside of __init___,
