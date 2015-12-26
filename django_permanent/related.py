@@ -45,17 +45,19 @@ def get_extra_restriction_patch(func):
 
 ForeignObject.get_extra_restriction = get_extra_restriction_patch(ForeignObject.get_extra_restriction)
 
+if django.get_version() >= '1.9':
+    from django.db.models.fields.related import ForwardManyToOneDescriptor as relation_descriptor
 
-if django.VERSION > (1, 8, -1):
-    from django.db.models.fields.related import ReverseSingleRelatedObjectDescriptor
+elif django.get_version() >= '1.8' and django.get_version() < '1.9':
+    from django.db.models.fields.related import ReverseSingleRelatedObjectDescriptor as relation_descriptor
 
-    def get_queryset_patch(func):
-        def wrapper(self, **hints):
-            from .models import PermanentModel
-            instance = hints.get('instance')
-            if instance and isinstance(instance, PermanentModel) and getattr(instance, settings.FIELD):
-                return self.field.rel.to.all_objects
-            return func(self, **hints)
-        return wrapper
+def get_queryset_patch(func):
+    def wrapper(self, **hints):
+        from .models import PermanentModel
+        instance = hints.get('instance')
+        if instance and isinstance(instance, PermanentModel) and getattr(instance, settings.FIELD):
+            return self.field.rel.to.all_objects
+        return func(self, **hints)
+    return wrapper
 
-    ReverseSingleRelatedObjectDescriptor.get_queryset = get_queryset_patch(ReverseSingleRelatedObjectDescriptor.get_queryset)
+relation_descriptor.get_queryset = get_queryset_patch(relation_descriptor.get_queryset)
